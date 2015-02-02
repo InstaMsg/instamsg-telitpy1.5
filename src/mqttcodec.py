@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import exceptions
 
 MQTT_PROTOCOL_VERSION = 3
 MQTT_PROTOCOL_NAME = "MQIsdp"
@@ -59,7 +58,7 @@ class MqttDecoder:
                 self.__state = self.READING_FIXED_HEADER_REMAINING
             if(self.__state == self.READING_FIXED_HEADER_REMAINING):
                 self.__decodeFixedHeaderRemainingLength()
-                if (self.__fixedHeader.messageType == MqttClient.PUBLISH and not self.__variableHeader):
+                if (self.__fixedHeader.messageType == PUBLISH and not self.__variableHeader):
                     self.__initPubVariableHeader()
             if(self.__state == self.READING_VARIABLE_HEADER):
                 self.__decodeVariableHeader()
@@ -116,10 +115,10 @@ class MqttDecoder:
         
 
     def __decodeVariableHeader(self):  
-        if self.__fixedHeader.messageType in [MqttClient.CONNECT, MqttClient.SUBSCRIBE, MqttClient.UNSUBSCRIBE, MqttClient.PINGREQ]:
+        if self.__fixedHeader.messageType in [CONNECT, SUBSCRIBE, UNSUBSCRIBE, PINGREQ]:
             self.__state = self.DISCARDING_MESSAGE
             self.__error = ('MqttDecoder: Client cannot receive CONNECT, SUBSCRIBE, UNSUBSCRIBE, PINGREQ message type.') 
-        elif self.__fixedHeader.messageType == MqttClient.CONNACK:
+        elif self.__fixedHeader.messageType == CONNACK:
             if(self.__fixedHeader.remainingLength != 2):
                 self.__state = self.BAD
                 self.__error = ('MqttDecoder: Mqtt CONNACK message should have remaining length 2 received %s.' % self.__fixedHeader.remainingLength) 
@@ -129,24 +128,24 @@ class MqttDecoder:
                 self.__getByteStr()  # discard reserved byte
                 self.__variableHeader['connectReturnCode'] = ord(self.__getByteStr())
                 self.__state = self.MESSAGE_READY
-        elif self.__fixedHeader.messageType == MqttClient.SUBACK:
+        elif self.__fixedHeader.messageType == SUBACK:
             messageId = self.__decodeMsbLsb()
             if(messageId is not None):
                 self.__variableHeader['messageId'] = messageId
                 self.__state = self.READING_PAYLOAD
-        elif self.__fixedHeader.messageType in [MqttClient.UNSUBACK, MqttClient.PUBACK, MqttClient.PUBREC, MqttClient.PUBCOMP, MqttClient.PUBREL]:
+        elif self.__fixedHeader.messageType in [UNSUBACK, PUBACK, PUBREC, PUBCOMP, PUBREL]:
             messageId = self.__decodeMsbLsb()
             if(messageId is not None):
                 self.__variableHeader['messageId'] = messageId
                 self.__state = self.MESSAGE_READY
-        elif self.__fixedHeader.messageType == MqttClient.PUBLISH:
+        elif self.__fixedHeader.messageType == PUBLISH:
             if(self.__variableHeader['topic'] is None):
                 self.__decodeTopic()
-            if (self.__fixedHeader.qos > MqttClient.MQTT_QOS0 and self.__variableHeader['topic'] is not None and self.__variableHeader['messageId'] is None):
+            if (self.__fixedHeader.qos > MQTT_QOS0 and self.__variableHeader['topic'] is not None and self.__variableHeader['messageId'] is None):
                 self.__variableHeader['messageId'] = self.__decodeMsbLsb()
-            if (self.__variableHeader['topic'] is not None and (self.__fixedHeader.qos == MqttClient.MQTT_QOS0 or self.__variableHeader['messageId'] is not None)):
+            if (self.__variableHeader['topic'] is not None and (self.__fixedHeader.qos == MQTT_QOS0 or self.__variableHeader['messageId'] is not None)):
                 self.__state = self.READING_PAYLOAD
-        elif self.__fixedHeader.messageType in [MqttClient.PINGRESP, MqttClient.DISCONNECT]:
+        elif self.__fixedHeader.messageType in [PINGRESP, DISCONNECT]:
             self.__mqttMsg = self.__msgFactory.message(self.__fixedHeader)
             self.__state = self.MESSAGE_READY
         else:
@@ -156,7 +155,7 @@ class MqttDecoder:
     def __decodePayload(self, bytesRemaining):
         paloadBytes = self.__getNBytesStr(bytesRemaining)
         if(paloadBytes is not None):
-            if self.__fixedHeader.messageType == MqttClient.SUBACK:
+            if self.__fixedHeader.messageType == SUBACK:
                 grantedQos = []
                 numberOfBytesConsumed = 0
                 while (numberOfBytesConsumed < bytesRemaining):
@@ -165,7 +164,7 @@ class MqttDecoder:
                     grantedQos.append(qos)
                 self.__payload = grantedQos
                 self.__state = self.MESSAGE_READY
-            elif self.__fixedHeader.messageType == MqttClient.PUBLISH:
+            elif self.__fixedHeader.messageType == PUBLISH:
                 self.__payload = paloadBytes
                 self.__state = self.MESSAGE_READY
     
@@ -186,7 +185,7 @@ class MqttDecoder:
             msb = self.__getByteStr()
             lsb = self.__getByteStr()
             intMsbLsb = ord(msb) << 8 | ord(lsb)
-        if (intMsbLsb < 0 or intMsbLsb > MqttClient.MQTT_MAX_INT):
+        if (intMsbLsb < 0 or intMsbLsb > MQTT_MAX_INT):
             return -1
         else:
             return intMsbLsb
@@ -222,21 +221,21 @@ class MqttEncoder:
     
     def ecode(self, mqttMessage):
         msgType = mqttMessage.fixedHeader.messageType
-        if msgType == MqttClient.CONNECT:
+        if msgType == CONNECT:
             return self.__encodeConnectMsg(mqttMessage) 
-        elif msgType == MqttClient.CONNACK:
+        elif msgType == CONNACK:
             return self.__encodeConnAckMsg(mqttMessage)
-        elif msgType == MqttClient.PUBLISH:
+        elif msgType == PUBLISH:
             return self.__encodePublishMsg(mqttMessage)
-        elif msgType == MqttClient.SUBSCRIBE:
+        elif msgType == SUBSCRIBE:
             return self.__encodeSubscribeMsg(mqttMessage)
-        elif msgType == MqttClient.UNSUBSCRIBE:
+        elif msgType == UNSUBSCRIBE:
             return self.__encodeUnsubscribeMsg(mqttMessage)
-        elif msgType == MqttClient.SUBACK:
+        elif msgType == SUBACK:
             return self.__encodeSubAckMsg(mqttMessage)
-        elif msgType in [MqttClient.UNSUBACK, MqttClient.PUBACK, MqttClient.PUBREC, MqttClient.PUBCOMP, MqttClient.PUBREL]:
+        elif msgType in [UNSUBACK, PUBACK, PUBREC, PUBCOMP, PUBREL]:
             return self.__encodeFixedHeaderAndMessageIdOnlyMsg(mqttMessage)
-        elif msgType in [MqttClient.PINGREQ, MqttClient.PINGRESP, MqttClient.DISCONNECT]:
+        elif msgType in [PINGREQ, PINGRESP, DISCONNECT]:
             return self.__encodeFixedHeaderOnlyMsg(mqttMessage)
         else:
             raise MqttEncoderError('MqttEncoder: Unknown message type.') 
@@ -353,20 +352,20 @@ class MqttEncoder:
             encodedVariableHeader = self.__encodeIntShort(mqttMessage.messageId)
             return self.__encodeFixedHeader(fixedHeader, variableHeaderSize, None) + encodedVariableHeader
         else:
-            if msgType == MqttClient.UNSUBACK: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttUnsubAckMsg.__name__, mqttMessage.__class__.__name__))
-            if msgType == MqttClient.PUBACK: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubAckMsg.__name__, mqttMessage.__class__.__name__))
-            if msgType == MqttClient.PUBREC: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubRecMsg.__name__, mqttMessage.__class__.__name__))
-            if msgType == MqttClient.PUBCOMP: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubCompMsg.__name__, mqttMessage.__class__.__name__))
-            if msgType == MqttClient.PUBREL: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubRelMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == UNSUBACK: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttUnsubAckMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == PUBACK: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubAckMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == PUBREC: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubRecMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == PUBCOMP: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubCompMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == PUBREL: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPubRelMsg.__name__, mqttMessage.__class__.__name__))
     
     def __encodeFixedHeaderOnlyMsg(self, mqttMessage):
         msgType = mqttMessage.fixedHeader.messageType
         if(isinstance(mqttMessage, MqttPingReqMsg) or isinstance(mqttMessage, MqttPingRespMsg) or isinstance(mqttMessage, MqttDisconnetMsg)):
             return self.__encodeFixedHeader(mqttMessage.fixedHeader, 0, None)
         else:
-            if msgType == MqttClient.PINGREQ: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPingReqMsg.__name__, mqttMessage.__class__.__name__))
-            if msgType == MqttClient.PINGRESP: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPingRespMsg.__name__, mqttMessage.__class__.__name__))
-            if msgType == MqttClient.DISCONNECT: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttDisconnetMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == PINGREQ: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPingReqMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == PINGRESP: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttPingRespMsg.__name__, mqttMessage.__class__.__name__))
+            if msgType == DISCONNECT: raise TypeError('MqttEncoder: Expecting message object of type %s got %s' % (MqttDisconnetMsg.__name__, mqttMessage.__class__.__name__))
     
     def __encodeFixedHeader(self, fixedHeader, variableHeaderSize, encodedPayload):
         if encodedPayload is None:
@@ -434,8 +433,8 @@ class MqttConnectMsg(MqttMsg):
     def __init__(self, fixedHeader, variableHeader, payload):
         MqttMsg.__init__(self, fixedHeader, variableHeader, payload)
         self.fixedHeader = fixedHeader
-        self.protocolName = MqttClient.MQTT_PROTOCOL_NAME
-        self.version = MqttClient.MQTT_PROTOCOL_VERSION
+        self.protocolName = MQTT_PROTOCOL_NAME
+        self.version = MQTT_PROTOCOL_VERSION
         self.hasUserName = variableHeader.get('hasUserName')
         self.hasPassword = variableHeader.get('hasPassword')
         self.clientId = payload.get('clientId')
@@ -538,33 +537,33 @@ class MqttUnsubAckMsg(MqttMsg):
 class MqttMsgFactory:
   
     def message(self, fixedHeader, variableHeader=None, payload=None):
-        if fixedHeader.messageType == MqttClient.PINGREQ: 
+        if fixedHeader.messageType == PINGREQ: 
             return MqttPingReqMsg(fixedHeader)
-        elif fixedHeader.messageType == MqttClient.PINGRESP: 
+        elif fixedHeader.messageType == PINGRESP: 
             return MqttPingRespMsg(fixedHeader)
-        elif fixedHeader.messageType == MqttClient.DISCONNECT: 
+        elif fixedHeader.messageType == DISCONNECT: 
             return MqttDisconnetMsg(fixedHeader)
-        elif fixedHeader.messageType == MqttClient.CONNECT:
+        elif fixedHeader.messageType == CONNECT:
             return MqttConnectMsg(fixedHeader, variableHeader, payload)
-        elif fixedHeader.messageType == MqttClient.CONNACK: 
+        elif fixedHeader.messageType == CONNACK: 
             return MqttConnAckMsg(fixedHeader, variableHeader)
-        elif fixedHeader.messageType == MqttClient.PUBLISH: 
+        elif fixedHeader.messageType == PUBLISH: 
             return MqttPublishMsg(fixedHeader, variableHeader, payload)
-        elif fixedHeader.messageType == MqttClient.SUBACK: 
+        elif fixedHeader.messageType == SUBACK: 
             return MqttPubAckMsg(fixedHeader, variableHeader)
-        elif fixedHeader.messageType == MqttClient.PUBREC: 
+        elif fixedHeader.messageType == PUBREC: 
             return MqttPubRecMsg(fixedHeader, variableHeader)
-        elif fixedHeader.messageType == MqttClient.PUBREL: 
+        elif fixedHeader.messageType == PUBREL: 
             return MqttPubRelMsg(fixedHeader, variableHeader)
-        elif fixedHeader.messageType == MqttClient.PUBCOMP: 
+        elif fixedHeader.messageType == PUBCOMP: 
             return MqttPubCompMsg(fixedHeader, variableHeader)
-        elif fixedHeader.messageType == MqttClient.SUBSCRIBE: 
+        elif fixedHeader.messageType == SUBSCRIBE: 
             return MqttSubscribeMsg(fixedHeader, variableHeader, payload)
-        elif fixedHeader.messageType == MqttClient.UNSUBSCRIBE: 
+        elif fixedHeader.messageType == UNSUBSCRIBE: 
             return MqttUnsubscribeMsg(fixedHeader, variableHeader, payload)
-        elif fixedHeader.messageType == MqttClient.SUBACK: 
+        elif fixedHeader.messageType == SUBACK: 
             return MqttSubAckMsg(fixedHeader, variableHeader, payload)
-        elif fixedHeader.messageType == MqttClient.UNSUBACK: 
+        elif fixedHeader.messageType == UNSUBACK: 
             return MqttUnsubAckMsg(fixedHeader, variableHeader)
         else:
             return None

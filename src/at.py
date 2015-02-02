@@ -399,10 +399,10 @@ def socketSend(connId,data,bytestosend,timeout,multiPart=0):
 
 def socketGetHTTP(connId,addr,data,timeout=30):
     try:
-        resp = sendCmd('AT#SD=%d,0,%d,"%s",0,0,0'%(connId,addr[1],addr[0]),timeout,expected='CONNECT\r\n',mdm=2)
-        resp = sendCmd(data,timeout,expected='HTTP/1.1 200 OK', addCR=0, mdm=2)
+        sendCmd('AT#SD=%d,0,%d,"%s",0,0,0'%(connId,addr[1],addr[0]),timeout,expected='CONNECT\r\n',mdm=2)
+        sendCmd(data,timeout,expected='HTTP/1.1 200 OK', addCR=0, mdm=2)
     finally:
-        resp = sendCmd('+++',timeout, expected='NO CARRIER\r\n', addCR=0, mdm=2)
+        sendCmd('+++',timeout, expected='NO CARRIER\r\n', addCR=0, mdm=2)
     
 def socketStatus(connId=None):
     if(connId):

@@ -288,7 +288,7 @@ class HTTPClient:
                 if(headers.has_key('Content-Length') and isinstance(body, file)):
                     sizeHint = len(request) + headers.get('Content-Length')
                 self._sock = socket.Socket(timeout, 0)
-                self._sock.connect(self.__addr, http=1)
+                self._sock.connect(self.__addr)
                 expect = None
                 if(headers.has_key('Expect')):
                     expect = headers['Expect']

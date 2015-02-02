@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import at
-import exceptions
 
 class ModemError(Exception):
     def __init__(self, value=''):

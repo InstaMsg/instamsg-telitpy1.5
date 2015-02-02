@@ -2,10 +2,9 @@
 import MOD
 import MDM
 import MDM2
-import sys 
+import time
 import mqtt
 import http
-import exceptions
 
 ####InstaMsg ###############################################################################
 # Logging Levels
